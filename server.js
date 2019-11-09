@@ -200,7 +200,7 @@ io.on('connection', function (socket) {
                 name: filename,
                 type: type,
                 folder: "",
-                data: data.data,
+                //data: data.data,
                 username: data.userName
             }
 
@@ -257,6 +257,17 @@ io.on('connection', function (socket) {
         /* console.log("Llegueeeee", __dirname + '/cloud/' + data.name + '/' + data.filename)
         var file = fs.createReadStream( 'cloud/' + data.name + '/' + data.filename /* __dirname + '/cloud/' + data.name + '/' + data.filename *//* ) */
         
+    });
+
+    socket.on('preview', function (data) {
+
+        if(data.folder === ""){
+            var file = fs.readFileSync('cloud/' + data.name + '/' + data.filename + '.' + data.type);
+            socket.emit('fileReceivedPreview', {file: file}, {filename: data.filename, type: data.type});
+        } else {
+            var file = fs.readFileSync('cloud/' + data.name + '/' + data.folder + '/' + data.filename + '.' + data.type);
+            socket.emit('fileReceivedPreview', {file: file}, {filename: data.filename, type: data.type});
+        }
     });
 
     socket.on('folder', function (data) {
@@ -391,6 +402,9 @@ io.on('connection', function (socket) {
                 fs.writeFile('files_uploaded.json', JSON.stringify(json_files), function(err){
                     if(err) throw err;
                 });
+
+                /* var textByLine = fs.readFileSync('cloud/admin/0001.txt').toString();
+                console.log(textByLine) */
 
                 if(data.folder === ''){
                     var filePath = 'cloud/' + data.username + '/' + data.name + '.' + data.type; 
