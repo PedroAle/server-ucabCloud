@@ -5,10 +5,9 @@ var server = require('http').createServer(app);
 var io = require('socket.io').listen(server); // Abro el socket escuchando dentro del servidor
 var _ = require('lodash');
 var fs = require('fs-extra');
+var readline = require('readline-sync');
 var json_users = JSON.parse(fs.readFileSync('users_registered.json'));
 var json_files = JSON.parse(fs.readFileSync('files_uploaded.json'));
-var input_iniciar_partida = process.stdin;
-input_iniciar_partida.setEncoding('utf-8'); // Permites caracteres especiales
 // ******* VARIABLES GLOBALES DEL SERVIDOR ********* //
 
 app.set('port', 3000);
@@ -97,7 +96,7 @@ io.on('connection', function (socket) {
   io.emit('this', { will: 'be received by everyone'});
 
   socket.on('private message', function (from, msg) {
-    console.log('I received a private message by ', from, ' saying ', msg);
+    // console.log('I received a private message by ', from, ' saying ', msg);
   });
 
   socket.on('disconnect', function () {
@@ -125,16 +124,17 @@ io.on('connection', function (socket) {
         })[0];
 
         if (!currentUser) {
-            console.log("El usuario no se encuentra registrado.");
-            /* verified.authorized = false;
-            socket.emit('USER_LOGGED', verified); */
+            // console.log("El usuario no se encuentra registrado.");
+            /* verified.authorized = false;*/
+            socket.emit('USER_UNKNOWN', data);
         }else if (currentUser.password === data.password) {
-            console.log("Se conecto");
+            // console.log("Se conecto");
             socket.emit('USER_LOGGED', data);
 
         } // Los passwords son diferentes, no se pudo loguear
         else {
-            console.log("El password recibido es incorrecto.");
+            socket.emit('PASSWORD', data);
+            // console.log("El password recibido es incorrecto.");
             /* socket.emit('USER_LOGGED', verified); */
         }
     });
@@ -154,13 +154,14 @@ io.on('connection', function (socket) {
             fs.mkdir('cloud/' + data.name, function(e){});
             fs.writeFile('users_registered.json', stringify, function (err) {
                 if (err) {
-                    console.log("Ocurrio un error guardando el usuario en el JSON");
+                    // console.log("Ocurrio un error guardando el usuario en el JSON");
                 }
-                console.log("El usuario fue registrado exitosamente.");
+                // console.log("El usuario fue registrado exitosamente.");
             })
             socket.emit("USER_REGISTERED", data);
         }
         else {
+            socket.emit("USER_EXISTED", data);
             console.log("El usuario ", data.name, " ya se encuentra registrado.");
         }
     });
@@ -175,7 +176,7 @@ io.on('connection', function (socket) {
         });
         // Se quito el usuario de la lista de clientes logueados
         if (_clientes.length < clientes.length) {
-            console.log("El usuario", capitalizeFirstLetter(data.name), "cerro sesión exitosamente");
+            // console.log("El usuario", capitalizeFirstLetter(data.name), "cerro sesión exitosamente");
             clientes = _clientes;
             socket.emit("USER_LOGGEDOUT", { "logout": true });
         }
@@ -208,10 +209,10 @@ io.on('connection', function (socket) {
             var stringify = JSON.stringify(json_files);
             fs.writeFile('files_uploaded.json', stringify, function (err) {
                 if (err) {
-                    console.log("Ocurrio un error guardando el archivo en el JSON");
+                    // console.log("Ocurrio un error guardando el archivo en el JSON");
                 }
                 socket.emit('getFiles', {username: data.userName, folder: ''})
-                console.log("El archivo fue guardado exitosamente.");
+                // console.log("El archivo fue guardado exitosamente.");
             })
 
             if (!files[data.name]) { 
@@ -235,7 +236,7 @@ io.on('connection', function (socket) {
                 
             });
         }else {
-            console.log("El archivo ", filename, " ya se encuentra guardado.");
+            // console.log("El archivo ", filename, " ya se encuentra guardado.");
         }
         
     });
@@ -271,7 +272,7 @@ io.on('connection', function (socket) {
     });
 
     socket.on('folder', function (data) {
-        console.log(data.name);
+        // console.log(data.name);
         
 
         if(data.name !== null){
@@ -292,14 +293,14 @@ io.on('connection', function (socket) {
                 var stringify = JSON.stringify(json_files);
                 fs.writeFile('files_uploaded.json', stringify, function (err) {
                     if (err) {
-                        console.log("Ocurrio un error creando la carpeta en el JSON");
+                        // console.log("Ocurrio un error creando la carpeta en el JSON");
                     }
-                    console.log("La carpeta fue creada exitosamente.");
+                    // console.log("La carpeta fue creada exitosamente.");
                     
                 })
                 fs.mkdir('cloud/' + data.username + '/' + data.name, function(e){});
             } else {
-                console.log('La carpeta ya existe');
+                // console.log('La carpeta ya existe');
             }
             socket.emit('uploaded');
         }
@@ -336,12 +337,12 @@ io.on('connection', function (socket) {
             fs.writeFile('files_uploaded.json', stringify, function (err) {
                 if (err) throw err;
             });
+            
+            fs.move('cloud/' + data.user + '/' + data.name + '.' + data.type, 'cloud/' + data.user + '/' + data.folder + '/' + data.name + '.' + data.type, function (err) {
+                /* if (err)
+                    console.error(err); */
+            });
         }
-        
-        fs.move('cloud/' + data.user + '/' + data.name + '.' + data.type, 'cloud/' + data.user + '/' + data.folder + '/' + data.name + '.' + data.type, function (err) {
-            if (err)
-                console.error(err);
-        });
         socket.emit('uploaded');
     })
 
@@ -350,10 +351,10 @@ io.on('connection', function (socket) {
             return file.username === data.username && file.folder === '';
         });
 
-        console.log(userFiles)
+        // console.log(userFiles)
 
         if(userFiles.length >= 0){
-            console.log("llegue");
+            // console.log("llegue");
             
             socket.emit("userFiles", userFiles);
         }else {
@@ -366,7 +367,7 @@ io.on('connection', function (socket) {
             return file.username === data.user && file.folder === data.folder;
         });
 
-        console.log(userFiles)
+        // console.log(userFiles)
 
         if(userFiles.length >= 0){
             socket.emit("userFilesFolder", userFiles);
@@ -378,7 +379,7 @@ io.on('connection', function (socket) {
     socket.on('deleteFile', function (data) {
 
         if(data){
-            console.log("DATAAAAA", data);
+            // console.log("DATAAAAA", data);
             
            
             
@@ -455,8 +456,8 @@ io.on('connection', function (socket) {
         var filePath = 'cloud/'+ data.name; 
         fs.removeSync(filePath);
 
-        console.log(userOn)
-        console.log(filesOn)
+        // console.log(userOn)
+        // console.log(filesOn)
     })
 
     /*****************************************************************
@@ -471,3 +472,4 @@ io.on('connection', function (socket) {
 server.listen(app.get('port'), function () {
     console.log("Server is running on port: ", app.get('port'));
 });
+
